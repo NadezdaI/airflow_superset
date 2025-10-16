@@ -4,10 +4,11 @@
 Создать инфраструктуру для обработки и визуализации данных о клиентах банка, включая автоматизацию процессов загрузки новых данных и обновления дашборда аналитиков.
 
 ### Технологии
+```
 PosgreSQL - в качестве базы данных
-Airflow - инструмента для автоматизации процессов загрузки новых данных и обновления дашборда
-Superset - для построения дашборда
-
+Airflow   - инструмент для автоматизации процессов загрузки новых данных и обновления дашборда
+Superset  - для построения дашборда
+```
 ![Схема](scheme.png)
 
 ### Задачи
@@ -16,37 +17,59 @@ Superset - для построения дашборда
 ## 1. Подготовка виртуальной машины
 1. Арендуйте виртуальную машину на Selectel с достаточными ресурсами для нескольких Docker-контейнеров.
 2. Подключитесь к виртуальной машине по SSH:
+```bash
 ssh your_user@your_vm_ip
-3. Обновите систему и установите необходимые пакеты:
+```
+3. Обновите систему:
+```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3 python3-venv python3-pip docker.io docker-compose git
+```
+4. Создайте виртуальное окружение и установите необходимые пакеты:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 4. Убедитесь, что Docker работает:
+```bash
 sudo systemctl start docker
 sudo systemctl enable docker
 docker --version
 docker-compose --version
+```
 
 ## 2. Установка и настройка PostgreSQL
-1. Установите PostgreSQL:
-sudo apt install -y postgresql postgresql-contrib
+1. Создайте хранилище (volume) для контейнера с БД:
+```bash
+docker volume create postgres_1_vol
+```
 2. Создайте базу данных и пользователя:
-sudo -i -u postgres
-psql
-CREATE DATABASE bankusers;
-CREATE USER bankuser WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE bankusers TO bankuser;
-\q
-exit
+```bash
+docker run -d \
+    --name postgres_1 \
+    -e POSTGRES_USER=postgres \
+    -e POSTGRES_PASSWORD='123' \
+    -e POSTGRES_DB=test_app \
+    -v postgres_1_vol:/var/lib/postgresql \
+    postgres:18
+```
+3. В локальном терминале прокидываем соединение:
+```bash
+ssh -L  8080:localhost:8080 <user_name>@<ip-address>
+```
+4. В браузере переходим по адресу: http://localhost:8080/login/
 
 ## 3. Настройка Airflow
-1. Создайте виртуальное окружение:
-python3 -m venv venv
-source venv/bin/activate
-2. Установите Airflow и провайдер PostgreSQL:
-pip install "apache-airflow[postgres]==2.7.3" psycopg2-binary
-3. Инициализируйте базу Airflow:
+
+1. Установите Airflow и провайдер PostgreSQL:
+```bash
+pip install "apache-airflow[postgres]==2.10.5" psycopg2-binary
+```
+2. Инициализируйте базу Airflow:
+```bash
 airflow db init
-4. Создайте соединение к PostgreSQL в Airflow:
+```
+3. Создайте соединение к PostgreSQL в Airflow:
+```bash
 airflow connections add banker_bd \
     --conn-type postgres \
     --conn-host localhost \
@@ -54,24 +77,41 @@ airflow connections add banker_bd \
     --conn-password your_password \
     --conn-schema bankusers \
     --conn-port 5432
-5. Запустите Airflow веб-сервер и шедулер:
+```
+4. Запустите Airflow веб-сервер и шедулер:
+```bash
 airflow webserver --port 8080
 airflow scheduler
-
+```
 ## 4. Настройка DAG для подгрузки данных из S3
 1. Создайте папку `dags` и добавьте DAG (Python-файл) с логикой загрузки CSV из S3 в PostgreSQL.
 2. Убедитесь, что DAG корректно подключен к `banker_bd` и расписание установлено на каждый час.
 3. Включите DAG через веб-интерфейс Airflow.
 
 ## 5. Установка Superset
-1. Установите Superset в виртуальное окружение:
-pip install apache-superset
-2. Инициализируйте Superset:
-superset db upgrade
-superset fab create-admin
-superset init
-3. Запустите Superset:
-superset run -p 8088 --with-threads --reload --debugger
-4. Добавьте подключение к базе `bankusers` в Superset.
-5. Создайте дашборды и настройте автоматическое обновление данных каждые 60 минут.
+1. Запуск контейнера Superset:
+```bash
+docker run -d \
+    -p 8080:8088 \
+    -e "SUPERSET_SECRET_KEY=$(openssl rand -base64 42)" \
+    --name superset \
+    apache/superset:latest-dev
+```
+3. Инициализируйте Superset:
+```bash
+docker exec -it superset superset fab create-admin \
+            --username admin \
+            --firstname Superset \
+            --lastname Admin \
+            --email admin@superset.com \
+            --password admin
+
+docker exec -it superset superset db upgrade
+```
+4. Запустите Superset:
+```bash
+docker exec -it superset superset init
+```
+6. Добавьте подключение к базе `bankusers` в Superset.
+7. Создайте дашборды и настройте автоматическое обновление данных каждые 60 минут.
 
