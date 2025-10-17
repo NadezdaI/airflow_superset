@@ -36,7 +36,7 @@ docker --version
 docker-compose --version
 ```
 
-## 2. Установка и подключение к PostgreSQL
+## 2. Установка PostgreSQL
 1. Создайте хранилище (volume) для контейнера с БД:
 ```bash
 docker volume create postgres_1_vol
@@ -57,7 +57,7 @@ ssh -L  8080:localhost:8080 <user_name>@<ip-address>
 ```
 4. В браузере переходим по адресу: http://localhost:8080/login/
 
-## 3. Настройка Airflow
+## 3. Настройка Airflow и подключение к PostgreSQL
 
 1. Установите Airflow и провайдер PostgreSQL:
 ```bash
