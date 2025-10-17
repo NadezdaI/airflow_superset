@@ -11,7 +11,6 @@ Superset  - для построения дашборда
 ```
 ![Схема](scheme.png)
 
-### Задачи
 # Инструкция по запуску платформы с нуля
 
 ## 1. Подготовка виртуальной машины
@@ -37,7 +36,7 @@ docker --version
 docker-compose --version
 ```
 
-## 2. Установка и настройка PostgreSQL
+## 2. Установка и подключение к PostgreSQL
 1. Создайте хранилище (volume) для контейнера с БД:
 ```bash
 docker volume create postgres_1_vol
